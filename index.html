@@ -16,10 +16,13 @@
             --sidebar-bg: #1a1a1a;
             --card-bg: #2a2a2a;
             --accent-glow: rgba(229, 9, 20, 0.3);
+            
+            /* Responsive Grid & Layout Bases */
             --card-min-width: 140px;
             --card-gap: 12px;
             --card-padding: 15px;
         }
+
         body { 
             background: var(--bg-dark); 
             color: white; 
@@ -29,6 +32,8 @@
             overflow: hidden;
             position: relative;
         }
+
+        /* --- Sidebar Styling --- */
         #sidebar { 
             width: 100%;  
             height: 100vh; 
@@ -36,8 +41,10 @@
             background: var(--sidebar-bg); 
             z-index: 10;
         }
+
         #sidebar::-webkit-scrollbar { width: 6px; }
         #sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+
         .sidebar-header {
             padding: 8px 10px;
             border-bottom: 1px solid #333;
@@ -49,17 +56,21 @@
             justify-content: center;
             align-items: center;
         }
+
         #lottie-logo {
             width: auto;
             height: 50px; 
             max-width: 100%;
         }
+
         #channel-list { 
             display: grid; 
             grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width), 1fr));
             padding: var(--card-padding); 
             gap: var(--card-gap); 
         }
+
+        /* --- Channel Card Styling --- */
         .channel-item { 
             aspect-ratio: 16/10;
             cursor: pointer; 
@@ -72,8 +83,10 @@
             border: 2px solid transparent;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
-            outline: none;
+            outline: none; /* Clear native blue focus rings on Android boxes */
         }
+
+        /* Unified state transformations for mouse hover & TV Remote D-Pad focus selection */
         .channel-item:hover,
         .channel-item:focus { 
             transform: translateY(-5px) scale(1.03);
@@ -81,19 +94,56 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.4), 0 0 15px var(--accent-glow);
             background: #333;
         }
+
         .channel-item img { 
             max-width: 80%; 
             max-height: 80%; 
             object-fit: contain; 
             filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
         }
-        @media (min-width: 600px) { :root { --card-min-width: 160px; --card-gap: 16px; --card-padding: 24px; } }
-        @media (min-width: 960px) { :root { --card-min-width: 180px; --card-gap: 20px; --card-padding: 30px; } }
-        @media (min-width: 1280px) {
-            :root { --card-min-width: 220px; --card-gap: 24px; --card-padding: 40px; }
-            .channel-item { border-radius: 16px; }
+
+        /* --- Cross-Device Display Adaptation Queries --- */
+
+        /* Android Tablets & Small Folding Devices */
+        @media (min-width: 600px) {
+            :root {
+                --card-min-width: 160px;
+                --card-gap: 16px;
+                --card-padding: 24px;
+            }
         }
-        @media (min-width: 2560px) { :root { --card-min-width: 320px; --card-gap: 36px; --card-padding: 60px; } }
+
+        /* Android Large Tablets, Foldables (Landscape) & Small Monitors */
+        @media (min-width: 960px) {
+            :root {
+                --card-min-width: 180px;
+                --card-gap: 20px;
+                --card-padding: 30px;
+            }
+        }
+
+        /* Android TV (1080p Standard UI Base) and Android Media Boxes */
+        @media (min-width: 1280px) {
+            :root {
+                --card-min-width: 220px;
+                --card-gap: 24px;
+                --card-padding: 40px;
+            }
+            .channel-item {
+                border-radius: 16px; /* Smoother scaling curves on heavy display matrices */
+            }
+        }
+
+        /* Ultra HD 4K Android TV Panels */
+        @media (min-width: 2560px) {
+            :root {
+                --card-min-width: 320px;
+                --card-gap: 36px;
+                --card-padding: 60px;
+            }
+        }
+
+        /* --- Video Player Container --- */
         #video-container { 
             display: none; 
             position: fixed;
@@ -106,16 +156,22 @@
             align-items: center;
             justify-content: center;
         }
+
         .video-wrapper {
             width: 100%;
-            height: 100%;
+            max-width: 1000px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            border: 1px solid #444;
             position: relative;
         }
+
         .video-wrapper video {
             width: 100%;
-            height: 100%;
-            background: #000;
+            display: block;
         }
+
         .loading-text {
             color: #888;
             font-style: italic;
@@ -132,7 +188,7 @@
           <div id="lottie-logo"></div>
       </div>
       <div id="channel-list">
-          <div class="loading-text">Loading Channels...</div>
+          <div class="loading-text">Loading...</div>
       </div>
   </div>
 
@@ -143,16 +199,13 @@
   </div>
 
   <script>
-    // Mock Lottie error prevention if file doesn't exist yet
-    try {
-        lottie.loadAnimation({
-          container: document.getElementById('lottie-logo'),
-          renderer: 'svg',
-          loop: true,
-          autoplay: true,
-          path: 'animation.json'
-        });
-    } catch(e) { console.log("Lottie asset skipped or missing."); }
+    lottie.loadAnimation({
+      container: document.getElementById('lottie-logo'),
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: 'animation.json'
+    });
   </script>
 
   <script>
@@ -164,7 +217,9 @@
         if (screen.orientation && screen.orientation.lock) {
           await screen.orientation.lock('landscape');
         }
-      } catch (err) { console.warn('Orientation lock failed:', err); }
+      } catch (err) {
+        console.warn('Orientation lock failed:', err);
+      }
     }
 
     async function requestFullscreenAndLockOrientation(video) {
@@ -175,37 +230,62 @@
           await video.webkitRequestFullscreen();
         }
         await lockScreenOrientation();
-      } catch (err) { console.warn('Fullscreen failed:', err); }
+      } catch (err) {
+        console.warn('Fullscreen or lock failed:', err);
+      }
     }
+
+    document.addEventListener('fullscreenchange', () => {
+      if (document.fullscreenElement) lockScreenOrientation();
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+      if (document.webkitFullscreenElement) lockScreenOrientation();
+    });
 
     async function initShaka(url, drmData = null) {
       const container = document.getElementById('video-container');
       container.style.display = 'flex';
+
       window.history.pushState({ playerOpen: true }, '');
 
       const video = document.getElementById('tv-player');
       shaka.polyfill.installAll();
 
+      // Clean cleanup engines
       if (hls) { hls.destroy(); hls = null; }
       if (player) { await player.destroy(); player = null; }
 
+      // CRITICAL BROWSER FIX: If it's a raw unencrypted HTTP stream (like http://103.215.194.93),
+      // we force native browser source execution to slide under rigid HTTPS mixed content blocks.
       const isHttpIpStream = url.startsWith('http://');
 
       if (isHttpIpStream && !drmData) {
-        video.removeAttribute('crossorigin');
+        console.log('HTTP IP Stream Detected. Forcing optimized source fallback.');
+        video.removeAttribute('crossorigin'); // Prevents CORS pre-flight block on raw IPs
         video.src = url;
         video.load();
         await requestFullscreenAndLockOrientation(video);
         video.play().catch(err => {
+          console.warn("Autoplay blocked, attempting fallback initialization:", err);
           video.muted = true;
           video.play();
         });
         return;
       }
 
+      // Restore cross-origin standard attributes for protected playlists
       video.setAttribute('crossorigin', 'anonymous');
       player = new shaka.Player(video);
       
+      player.getNetworkingEngine().registerRequestFilter((type, request) => {
+        if (url.includes('your-site.com') || drmData) {
+          if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+            request.headers['Referer'] = window.location.origin;
+            request.headers['Origin'] = window.location.origin;
+          }
+        }
+      });
+
       try {
         if (url.includes('.m3u8') && !drmData) {
           await player.unload();
@@ -217,12 +297,29 @@
             await requestFullscreenAndLockOrientation(video);
             await video.play();
           } else if (Hls.isSupported()) {
-            hls = new Hls({ xhrSetup: function(xhr) { xhr.withCredentials = false; }, crossOrigin: true });
+            hls = new Hls({
+              xhrSetup: function(xhr) { xhr.withCredentials = false; },
+              crossOrigin: true
+            });
             hls.loadSource(url);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, async () => {
               await requestFullscreenAndLockOrientation(video);
               await video.play();
+            });
+            hls.on(Hls.Events.ERROR, function (event, data) {
+              if (data.fatal) {
+                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                  hls.startLoad();
+                } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                  hls.recoverMediaError();
+                } else {
+                  // Final native fallback loop
+                  video.src = url;
+                  video.load();
+                  video.play();
+                }
+              }
             });
           }
         } else {
@@ -234,15 +331,21 @@
           await video.play();
         }
       } catch (error) {
+        console.error('Playback initialization intercepted error:', error);
+        // Universal failure escape valve: load natively
         video.src = url;
         video.load();
-        video.play().catch(e => console.error(e));
+        video.play().catch(e => console.error("Native structural failure:", e));
       }
     }
 
     function handlePlayerBackAction() {
       if (document.fullscreenElement || document.webkitFullscreenElement) {
-        if (document.exitFullscreen) { document.exitFullscreen().catch(e => console.log(e)); }
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(err => console.log(err));
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen().catch(err => console.log(err));
+        }
         window.history.pushState({ playerOpen: true }, '');
       } else {
         closePlayer();
@@ -252,51 +355,94 @@
     async function closePlayer() {
       const video = document.getElementById('tv-player');
       video.pause();
+      
       if (hls) { hls.destroy(); hls = null; }
       if (player) { await player.destroy(); player = null; }
+
       video.src = "";
       video.load();
+      
       document.getElementById('video-container').style.display = 'none';
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(err => console.log(err));
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen().catch(err => console.log(err));
+        }
+      }
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
     }
 
-    // NEW JAVASCRIPT-BASED PARSER REPLACING PHP
+    /* NEW CLIENT-SIDE PARSER (Replacing api.php completely)
+      Translates your exact PHP logic to Javascript line-by-line.
+    */
+    async function parseM3UInternal(playlistUrl) {
+      // Proxy alternative to slide past CORS blocks if playing on a restricted browser environment.
+      // If running inside a localized WebView (Android App), direct fetch works fine.
+      const targetUrl = `https://cors-anywhere.herokuapp.com/${playlistUrl}`;
+      
+      // Attempt to clear via direct fetch first, fallback to proxy if blocked
+      let response;
+      try {
+        response = await fetch(playlistUrl);
+      } catch(e) {
+        response = await fetch(targetUrl);
+      }
+
+      const content = await response.text();
+      const lines = content.split('\n');
+      
+      let playlist = [];
+      let current = {};
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+
+        if (line === '') continue;
+
+        if (line.indexOf('#EXTINF') === 0) {
+          // Extract logo
+          let logoMatch = line.match(/tvg-logo="([^"]+)"/);
+          
+          // Extract channel name (everything after the last comma)
+          let commaPos = line.lastIndexOf(',');
+          let name = (commaPos !== -1) ? line.substring(commaPos + 1) : 'Unknown Channel';
+
+          current = {
+            name: name.trim(),
+            logo: logoMatch ? logoMatch[1] : ''
+          };
+
+        } else if (line.indexOf('#KODIPROP') === 0 && line.indexOf('license_key=') !== -1) {
+          // Extract ClearKey DRM data
+          let keyInfo = line.match(/license_key=(.*?):(.*)/);
+          if (keyInfo) {
+            current.drm = 'clearkey';
+            current.keyId = keyInfo[1].trim();
+            current.key = keyInfo[2].trim();
+          }
+
+        } else if (line.indexOf('#') !== 0) {
+          // Line is a URL, lock in the channel object
+          current.url = line;
+          playlist.push(current);
+          current = {}; // Reset for next channel
+        }
+      }
+      return playlist;
+    }
+
     async function loadPlaylist(playlistUrl, isFirstPlaylist) {
       try {
-        // Fetch raw M3U text content directly via JS fetch
-        const response = await fetch(playlistUrl);
-        const content = await response.text();
+        // Replaced the api.php endpoint call with our local client-side Javascript engine
+        const channels = await parseM3UInternal(playlistUrl);
 
-        const lines = content.split('\n');
-        const channels = [];
-        let current = {};
-
-        // Emulating your exact PHP regex loop logic
-        lines.forEach(line => {
-          line = line.trim();
-          if (!line) return;
-
-          if (line.startsWith('#EXTINF')) {
-            const logoMatch = line.match(/tvg-logo="([^"]+)"/);
-            const commaPos = line.lastIndexOf(',');
-            const name = commaPos !== -1 ? line.substring(commaPos + 1) : 'Unknown Channel';
-
-            current = {
-              name: name.trim(),
-              logo: logoMatch ? logoMatch[1] : ''
-            };
-          } else if (line.startsWith('#KODIPROP') && line.includes('license_key=')) {
-            const keyInfo = line.match(/license_key=(.*?):(.*)/);
-            if (keyInfo) {
-              current.drm = 'clearkey';
-              current.keyId = keyInfo[1].trim();
-              current.key = keyInfo[2].trim();
-            }
-          } else if (!line.startsWith('#')) {
-            current.url = line;
-            channels.push(current);
-            current = {};
-          }
-        });
+        if (!channels || channels.length === 0) {
+          console.error('No channels found or fetched.');
+          return;
+        }
 
         const playlistEl = document.getElementById('channel-list');
         if (isFirstPlaylist) {
@@ -306,7 +452,7 @@
         channels.forEach(channel => {
           const li = document.createElement('div');
           li.className = 'channel-item';
-          li.setAttribute('tabindex', '0');
+          li.setAttribute('tabindex', '0'); // CRITICAL FOR ANDROID TV: Makes elements focusable via TV Remotes
           li.setAttribute('data-url', channel.url);
           li.setAttribute('data-drm', channel.drm ? 'clearkey' : 'false');
           
@@ -318,6 +464,7 @@
           const img = document.createElement('img');
           img.src = channel.logo || 'https://via.placeholder.com/100?text=No+Logo';
           img.alt = channel.name;
+          img.title = channel.name;
 
           li.appendChild(img);
           playlistEl.appendChild(li);
@@ -325,29 +472,115 @@
           li.addEventListener('click', () => {
             const url = li.getAttribute('data-url');
             const isDrm = li.getAttribute('data-drm') === 'clearkey';
-            const drmData = isDrm ? { keyId: li.getAttribute('data-key-id'), key: li.getAttribute('data-key') } : null;
+            const keyId = li.getAttribute('data-key-id');
+            const key = li.getAttribute('data-key');
+            const drmData = isDrm ? { keyId, key } : null;
+            
             initShaka(url, drmData);
+          });
+
+          // TV Remote Click Controller Support
+          li.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                li.click();
+            }
           });
         });
       } catch (error) {
-        console.error('Failed to parse remote list:', error);
+        console.error('Failed to load playlist:', error);
       }
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
       const playlists = [
         'https://modsmz.github.io/ch/sports.m3u',
-        'https://raw.githubusercontent.com/Ajayone8x/sportzx-playlist/refs/heads/main/Sportzx.m3u8'
+        'https://raw.githubusercontent.com/Ajayone8x/sportzx-playlist/refs/heads/main/Sportzx.m3u8',
+        'https://example.com/another-playlist-2.m3u'
       ];
 
       for (let i = 0; i < playlists.length; i++) {
-        await loadPlaylist(playlists[i], i === 0);
+        const isFirst = (i === 0);
+        await loadPlaylist(playlists[i], isFirst);
       }
     });
 
-    window.addEventListener('popstate', () => {
-      if (document.getElementById('video-container').style.display === 'flex') handlePlayerBackAction();
+    window.addEventListener('popstate', function (event) {
+      const container = document.getElementById('video-container');
+      if (container.style.display === 'flex') {
+        handlePlayerBackAction();
+      }
     });
+
+    window.addEventListener('keydown', function(e) {
+      const container = document.getElementById('video-container');
+      if (container.style.display === 'flex' && (e.key === 'Escape' || e.keyCode === 27)) {
+        handlePlayerBackAction();
+      }
+    });
+  </script>
+
+  <script>
+    var image_save_msg='You Can Not Save images!';
+    var no_menu_msg='Context Menu disabled!';
+    var smessage = "Content is protected !!";
+
+    function disableEnterKey(e) {
+      if (e.ctrlKey){
+        var key = window.event ? window.event.keyCode : e.which;
+        if ([97, 65, 67, 99, 88, 120, 26, 85, 86, 83, 43].includes(key)) {
+          alert('You are not allowed to copy content or view source');
+          return false;
+        }
+      }
+    }
+
+    function disable_copy(e) {
+      var elemtype = e.target.nodeName.toUpperCase();
+      var isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+      if (!["TEXT", "TEXTAREA", "INPUT", "PASSWORD", "SELECT", "OPTION", "EMBED"].includes(elemtype)) {
+        if (smessage !== "" && e.detail === 2) alert(smessage);
+        return isSafari ? true : false;
+      }
+    }
+
+    function disable_copy_ie() {
+      var elemtype = window.event.srcElement.nodeName.toUpperCase();
+      if (!["TEXT", "TEXTAREA", "INPUT", "PASSWORD", "SELECT", "OPTION", "EMBED"].includes(elemtype)) {
+        return false;
+      }
+    }
+
+    function reEnable() { return true; }
+
+    document.onkeydown = disableEnterKey;
+    document.onselectstart = disable_copy_ie;
+    if(navigator.userAgent.indexOf('MSIE') === -1){
+      document.onmousedown = disable_copy;
+      document.onclick = reEnable;
+    }
+
+    function disableSelection(target) {
+      if (typeof target.onselectstart != "undefined") target.onselectstart = disable_copy_ie;
+      else if (typeof target.style.MozUserSelect != "undefined") target.style.MozUserSelect = "none";
+      else target.onmousedown = function() { return false; }
+      target.style.cursor = "default";
+    }
+
+    window.onload = function() {
+      disableSelection(document.body);
+    };
+
+    document.ondragstart = function() { return false; }
+    
+    document.oncontextmenu = function(e) { 
+      const container = document.getElementById('video-container');
+      if (container && container.style.display === 'flex') {
+        e.preventDefault();
+        handlePlayerBackAction();
+        return false;
+      }
+      return false; 
+    }
   </script>
 </body>
 </html>
