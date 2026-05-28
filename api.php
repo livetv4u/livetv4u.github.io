@@ -63,9 +63,11 @@ foreach ($lines as $line) {
         
     } elseif (strpos($line, '#') !== 0) {
         // Line is a URL, lock in the channel object
-        $current['url'] = $line;
-        $playlist[] = $current;
-        $current = []; // Reset for next channel
+        if (!empty($current)) {
+            $current['url'] = $line;
+            $playlist[] = $current;
+            $current = []; // Reset for next channel
+        }
     }
 }
 
