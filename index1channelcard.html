@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live TV</title>
+  <script src="https://unpkg.com/mux.js/dist/mux.min.js"></script>
+  <script src="https://unpkg.com/shaka-player@latest/dist/shaka-player.compiled.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://unpkg.com/hls.js@latest/dist/hls.min.js"></script>
+  <!-- Included Lottie Web Player Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+  <style>
+        :root {
+            --primary-color: #e50914;
+            --bg-dark: #0f0f0f;
+            --sidebar-bg: #1a1a1a;
+            --card-bg: #2a2a2a;
+            --accent-glow: rgba(229, 9, 20, 0.3);
+            
+            /* Responsive Grid & Layout Bases */
+            --card-min-width: 140px;
+            --card-gap: 12px;
+            --card-padding: 15px;
+        }
+
+        body { 
+            background: var(--bg-dark); 
+            color: white; 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- Sidebar Styling --- */
+        #sidebar { 
+            width: 100%;  
+            height: 100vh; 
+            overflow-y: auto; 
+            background: var(--sidebar-bg); 
+            z-index: 10;
+        }
+
+        #sidebar::-webkit-scrollbar { width: 6px; }
+        #sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+
+        .sidebar-header {
+            padding: 8px 10px;
+            border-bottom: 1px solid #333;
+            position: sticky;
+            top: 0;
+            background: var(--sidebar-bg);
+            z-index: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #lottie-logo {
+            width: auto;
+            height: 50px; 
+            max-width: 100%;
+        }
+
+        #channel-list { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width), 1fr));
+            padding: var(--card-padding); 
+            gap: var(--card-gap); 
+        }
+
+        /* --- Channel Card Styling --- */
+        .channel-item { 
+            aspect-ratio: 16/10;
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: var(--card-bg); 
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            outline: none; /* Clear native blue focus rings on Android boxes */
+        }
+
+        /* Unified state transformations for mouse hover & TV Remote D-Pad focus selection */
+        .channel-item:hover,
+        .channel-item:focus { 
+            transform: translateY(-5px) scale(1.03);
+            border-color: var(--primary-color);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4), 0 0 15px var(--accent-glow);
+            background: #333;
+        }
+
+        .channel-item img { 
+            max-width: 80%; 
+            max-height: 80%; 
+            object-fit: contain; 
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
+        }
+
+        /* --- Cross-Device Display Adaptation Queries --- */
+
+        /* Android Tablets & Small Folding Devices */
+        @media (min-width: 600px) {
+            :root {
+                --card-min-width: 160px;
+                --card-gap: 16px;
+                --card-padding: 24px;
+            }
+        }
+
+        /* Android Large Tablets, Foldables (Landscape) & Small Monitors */
+        @media (min-width: 960px) {
+            :root {
+                --card-min-width: 180px;
+                --card-gap: 20px;
+                --card-padding: 30px;
+            }
+        }
+
+        /* Android TV (1080p Standard UI Base) and Android Media Boxes */
+        @media (min-width: 1280px) {
+            :root {
+                --card-min-width: 220px;
+                --card-gap: 24px;
+                --card-padding: 40px;
+            }
+            .channel-item {
+                border-radius: 16px; /* Smoother scaling curves on heavy display matrices */
+            }
+        }
+
+        /* Ultra HD 4K Android TV Panels */
+        @media (min-width: 2560px) {
+            :root {
+                --card-min-width: 320px;
+                --card-gap: 36px;
+                --card-padding: 60px;
+            }
+        }
+
+        /* --- Video Player Container --- */
+        #video-container { 
+            display: none; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: #000;
+            z-index: 20;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-wrapper {
+            width: 100%;
+            max-width: 1000px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            border: 1px solid #444;
+            position: relative;
+        }
+
+        .video-wrapper video {
+            width: 100%;
+            display: block;
+        }
+
+        .loading-text {
+            color: #888;
+            font-style: italic;
+            text-align: center;
+            grid-column: 1/-1;
+            padding: 20px;
+        }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar">
+      <div class="sidebar-header">
+          <div id="lottie-logo"></div>
+      </div>
+      <div id="channel-list">
+          <div class="loading-text">Loading...</div>
+      </div>
+  </div>
+
+  <div id="video-container">
+      <div class="video-wrapper">
+          <video id="tv-player" controls preload="auto" poster="https://i.postimg.cc/ZnRrqLdW/SCBWs.png" crossorigin="anonymous"></video>
+      </div>
+  </div>
+
+  <!-- Initialize Lottie Player Instance -->
+  <script>
+    lottie.loadAnimation({
+      container: document.getElementById('lottie-logo'),
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: 'animation12.json'
+    });
+  </script>
+
+  <script>
+    let player;
+    let hls;
+
+    async function lockScreenOrientation() {
+      try {
+        if (screen.orientation && screen.orientation.lock) {
+          await screen.orientation.lock('landscape');
+        }
+      } catch (err) {
+        console.warn('Orientation lock failed:', err);
+      }
+    }
+
+    async function requestFullscreenAndLockOrientation(video) {
+      try {
+        if (video.requestFullscreen) {
+          await video.requestFullscreen();
+        } else if (video.webkitRequestFullscreen) { 
+          await video.webkitRequestFullscreen();
+        }
+        await lockScreenOrientation();
+      } catch (err) {
+        console.warn('Fullscreen or lock failed:', err);
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      if (document.fullscreenElement) lockScreenOrientation();
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+      if (document.webkitFullscreenElement) lockScreenOrientation();
+    });
+
+    async function initShaka(url, drmData = null) {
+      const container = document.getElementById('video-container');
+      container.style.display = 'flex';
+
+      window.history.pushState({ playerOpen: true }, '');
+
+      const video = document.getElementById('tv-player');
+      shaka.polyfill.installAll();
+
+      // Clean cleanup engines
+      if (hls) { hls.destroy(); hls = null; }
+      if (player) { await player.destroy(); player = null; }
+
+      // CRITICAL BROWSER FIX: If it's a raw unencrypted HTTP stream (like http://103.215.194.93),
+      // we force native browser source execution to slide under rigid HTTPS mixed content blocks.
+      const isHttpIpStream = url.startsWith('http://');
+
+      if (isHttpIpStream && !drmData) {
+        console.log('HTTP IP Stream Detected. Forcing optimized source fallback.');
+        video.removeAttribute('crossorigin'); // Prevents CORS pre-flight block on raw IPs
+        video.src = url;
+        video.load();
+        await requestFullscreenAndLockOrientation(video);
+        video.play().catch(err => {
+          console.warn("Autoplay blocked, attempting fallback initialization:", err);
+          video.muted = true;
+          video.play();
+        });
+        return;
+      }
+
+      // Restore cross-origin standard attributes for protected playlists
+      video.setAttribute('crossorigin', 'anonymous');
+      player = new shaka.Player(video);
+      
+      player.getNetworkingEngine().registerRequestFilter((type, request) => {
+        if (url.includes('your-site.com') || drmData) {
+          if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+            request.headers['Referer'] = window.location.origin;
+            request.headers['Origin'] = window.location.origin;
+          }
+        }
+      });
+
+      try {
+        if (url.includes('.m3u8') && !drmData) {
+          await player.unload();
+          player.detach();
+
+          if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+            video.load();
+            await requestFullscreenAndLockOrientation(video);
+            await video.play();
+          } else if (Hls.isSupported()) {
+            hls = new Hls({
+              xhrSetup: function(xhr) { xhr.withCredentials = false; },
+              crossOrigin: true
+            });
+            hls.loadSource(url);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, async () => {
+              await requestFullscreenAndLockOrientation(video);
+              await video.play();
+            });
+            hls.on(Hls.Events.ERROR, function (event, data) {
+              if (data.fatal) {
+                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                  hls.startLoad();
+                } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                  hls.recoverMediaError();
+                } else {
+                  // Final native fallback loop
+                  video.src = url;
+                  video.load();
+                  video.play();
+                }
+              }
+            });
+          }
+        } else {
+          player.configure({
+            drm: drmData ? { clearKeys: { [drmData.keyId]: drmData.key } } : {}
+          });
+          await player.load(url);
+          await requestFullscreenAndLockOrientation(video);
+          await video.play();
+        }
+      } catch (error) {
+        console.error('Playback initialization intercepted error:', error);
+        // Universal failure escape valve: load natively
+        video.src = url;
+        video.load();
+        video.play().catch(e => console.error("Native structural failure:", e));
+      }
+    }
+
+    function handlePlayerBackAction() {
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(err => console.log(err));
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen().catch(err => console.log(err));
+        }
+        window.history.pushState({ playerOpen: true }, '');
+      } else {
+        closePlayer();
+      }
+    }
+
+    async function closePlayer() {
+      const video = document.getElementById('tv-player');
+      video.pause();
+      
+      if (hls) { hls.destroy(); hls = null; }
+      if (player) { await player.destroy(); player = null; }
+
+      video.src = "";
+      video.load();
+      
+      document.getElementById('video-container').style.display = 'none';
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(err => console.log(err));
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen().catch(err => console.log(err));
+        }
+      }
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    }
+
+    async function loadPlaylist(playlistUrl, isFirstPlaylist) {
+      try {
+        const apiUrl = `api.php?url=${encodeURIComponent(playlistUrl)}`;
+        const response = await fetch(apiUrl);
+        const channels = await response.json();
+
+        if (channels.error) {
+          console.error('API Error:', channels.error);
+          return;
+        }
+
+        const playlistEl = document.getElementById('channel-list');
+        if (isFirstPlaylist) {
+          playlistEl.innerHTML = '';
+        }
+
+        channels.forEach(channel => {
+          const li = document.createElement('div');
+          li.className = 'channel-item';
+          li.setAttribute('tabindex', '0'); // CRITICAL FOR ANDROID TV: Makes elements focusable via TV Remotes
+          li.setAttribute('data-url', channel.url);
+          li.setAttribute('data-drm', channel.drm ? 'clearkey' : 'false');
+          
+          if (channel.drm) {
+            li.setAttribute('data-key-id', channel.keyId);
+            li.setAttribute('data-key', channel.key);
+          }
+
+          const img = document.createElement('img');
+          img.src = channel.logo || 'https://via.placeholder.com/100?text=No+Logo';
+          img.alt = channel.name;
+          img.title = channel.name;
+
+          li.appendChild(img);
+          playlistEl.appendChild(li);
+
+          li.addEventListener('click', () => {
+            const url = li.getAttribute('data-url');
+            const isDrm = li.getAttribute('data-drm') === 'clearkey';
+            const keyId = li.getAttribute('data-key-id');
+            const key = li.getAttribute('data-key');
+            const drmData = isDrm ? { keyId, key } : null;
+            
+            initShaka(url, drmData);
+          });
+
+          // TV Remote Click Controller Support
+          li.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                li.click();
+            }
+          });
+        });
+      } catch (error) {
+        console.error('Failed to load playlist:', error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const playlists = [
+        'https://modsmz.github.io/ch/sports.m3u',
+        'https://raw.githubusercontent.com/Ajayone8x/sportzx-playlist/refs/heads/main/Sportzx.m3u8',
+        'https://example.com/another-playlist-2.m3u'
+      ];
+
+      for (let i = 0; i < playlists.length; i++) {
+        const isFirst = (i === 0);
+        await loadPlaylist(playlists[i], isFirst);
+      }
+    });
+
+    window.addEventListener('popstate', function (event) {
+      const container = document.getElementById('video-container');
+      if (container.style.display === 'flex') {
+        handlePlayerBackAction();
+      }
+    });
+
+    window.addEventListener('keydown', function(e) {
+      const container = document.getElementById('video-container');
+      if (container.style.display === 'flex' && (e.key === 'Escape' || e.keyCode === 27)) {
+        handlePlayerBackAction();
+      }
+    });
+  </script>
+
+  <!-- Content protection scripts -->
+  <script>
+    var image_save_msg='You Can Not Save images!';
+    var no_menu_msg='Context Menu disabled!';
+    var smessage = "Content is protected !!";
+
+    function disableEnterKey(e) {
+      if (e.ctrlKey){
+        var key = window.event ? window.event.keyCode : e.which;
+        if ([97, 65, 67, 99, 88, 120, 26, 85, 86, 83, 43].includes(key)) {
+          alert('You are not allowed to copy content or view source');
+          return false;
+        }
+      }
+    }
+
+    function disable_copy(e) {
+      var elemtype = e.target.nodeName.toUpperCase();
+      var isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+      if (!["TEXT", "TEXTAREA", "INPUT", "PASSWORD", "SELECT", "OPTION", "EMBED"].includes(elemtype)) {
+        if (smessage !== "" && e.detail === 2) alert(smessage);
+        return isSafari ? true : false;
+      }
+    }
+
+    function disable_copy_ie() {
+      var elemtype = window.event.srcElement.nodeName.toUpperCase();
+      if (!["TEXT", "TEXTAREA", "INPUT", "PASSWORD", "SELECT", "OPTION", "EMBED"].includes(elemtype)) {
+        return false;
+      }
+    }
+
+    function reEnable() { return true; }
+
+    document.onkeydown = disableEnterKey;
+    document.onselectstart = disable_copy_ie;
+    if(navigator.userAgent.indexOf('MSIE') === -1){
+      document.onmousedown = disable_copy;
+      document.onclick = reEnable;
+    }
+
+    function disableSelection(target) {
+      if (typeof target.onselectstart != "undefined") target.onselectstart = disable_copy_ie;
+      else if (typeof target.style.MozUserSelect != "undefined") target.style.MozUserSelect = "none";
+      else target.onmousedown = function() { return false; }
+      target.style.cursor = "default";
+    }
+
+    window.onload = function() {
+      disableSelection(document.body);
+    };
+
+    document.ondragstart = function() { return false; }
+    
+    document.oncontextmenu = function(e) { 
+      const container = document.getElementById('video-container');
+      if (container && container.style.display === 'flex') {
+        e.preventDefault();
+        handlePlayerBackAction();
+        return false;
+      }
+      return false; 
+    }
+  </script>
+</body>
+</html>
